@@ -1,0 +1,14 @@
+transformers
+scipy
+text_unidecode
+emoji
+phonemizer
+numpy
+matplotlib
+librosa
+Cython
+Unidecode
+tensorboard
+gdown
+torch
+torchvision
