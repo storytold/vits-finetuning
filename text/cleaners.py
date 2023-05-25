@@ -12,16 +12,27 @@ hyperparameter. Some cleaners are English-specific. You'll typically want to use
      the symbols in symbols.py to match your data).
 '''
 
+# static variables
+# I still want to keep these phonemizers easily available in case of a fork or something
+# that way you don't need to have espeak-ng and festival installed to use
+HAS_FESTIVAL = False
+HAS_ESPEAK = False
+
 import re
 from unidecode import unidecode
 from phonemizer import phonemize
 import phonemizer
 from .arpa import ARPAPhonemizer
 
-global_phonemizer = phonemizer.backend.EspeakBackend(language='en-us', preserve_punctuation=True,  with_stress=True)
-spanish_phonemizer = phonemizer.backend.EspeakBackend(language='es-419', preserve_punctuation=True,  with_stress=True)
+if HAS_ESPEAK:
+    global_phonemizer = phonemizer.backend.EspeakBackend(language='en-us', preserve_punctuation=True,  with_stress=True)
+    spanish_phonemizer = phonemizer.backend.EspeakBackend(language='es-419', preserve_punctuation=True,  with_stress=True)
 
-fest_phonemizer = phonemizer.backend.FestivalBackend(language='en-us', preserve_punctuation=True)
+if HAS_FESTIVAL:
+    fest_phonemizer = phonemizer.backend.FestivalBackend(language='en-us', preserve_punctuation=True)
+
+
+
 arpa_phonemizer = ARPAPhonemizer()
 
 

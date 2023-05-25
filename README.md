@@ -1,3 +1,45 @@
+﻿# VITS-Finetuning
+
+This repo presents an efficiently finetuneable (on Colab) version of a heavily modified VITS model.
+
+The model has had several enhancements:
+
+1. [iSTFTNet generator + Avocodo discriminators](https://github.com/rishikksh20/iSTFT-Avocodo-pytorch/tree/faster).  Provides a 2.3x inference speed increase, and somewhat faster training, at the cost of a bit of audio quality
+2. [Mixer-TTS Convolutional Attention module](https://nv-adlr.github.io/one-tts-alignment). More up to date technique for learning attention and removes the Cython compile step for the default MAS. 
+3. [Mixer-TTS Self Attention module](https://github.com/NVIDIA/NeMo/blob/8685468036bebcc2eaea580d3ab5e140b7751b04/nemo/collections/tts/modules/mixer_tts.py#L185). Allows for injecting BERT context for more rich and expressive speech. We use TinyBERT.
+4. TorchMoji embedding. Using hidden states from TorchMoji allows for some more explicit emotion control.
+5. ARPA phonemizer with custom dictionary. 
+
+But most importantly for enabling training on Google Colab, we implement single-GPU [gradient accumulation](https://kozodoi.me/blog/20210219/gradient-accumulation). Most common GPUs on Colab have just 16GB of VRAM, which is insufficient to fit a batch size of 32 natively (unless max sample length is very harshly limited). However, the model results in very hard to converge and choppy speech (think like they were words pieced together in a YTP) if the batch size is reduced.
+Gradient accumulation allows us to "fake" higher batch size training, so we can use `batch_size=16` with 2x gradient accumulation and the model will turn out as if we used `batch_size=32`. 
+Lastly, for some more VRAM savings, we use [8bit optimizer from bitsandbytes](https://github.com/TimDettmers/bitsandbytes). [(nivibilla et al)](https://github.com/nivibilla/efficient-vits-finetuning).
+
+With all these modifications (and fp16 enabled), the training consumes roughly 11 - 14GB of VRAM.
+
+## Scripts
+
+### Training
+The training script can take a `-p` argument, which will warm start from a pretrained model.
+```sh
+python train.py -c ./configs/ljs_li44_tmbert_ft_small_s1_arpa.json -m "train/MyVoice" -p pt_hanashi
+```
+Additionally, for reducing disk space consumption, you can add `--use-latest` which will save each time into a single `G_latest`, `D0_latest`, `D1_latest` instead of separate files every checkpoint interval. 
+
+
+### Exporting to TorchScript
+Device can be either cpu or cuda. They must match at inference time, cpu-exported model on CPU and CUDA-exported model on GPU.
+```sh
+python export_ts.py --checkpoint G_latest.pth --device cpu --config ./configs/ljs_li44_tmbert_ft_small_s1_arpa.json --out-path my_tsvits.pt --test-string "I like pizza"
+```
+
+### Inference with TorchScript
+Device can be either cpu or cuda. Again, this must match the device you exported to TS with, cpu-exported model on CPU and CUDA-exported model on GPU.
+```sh
+python infer_ts.py --out-path res --device cpu --config ./configs/ljs_li44_tmbert_nmp_s1_arpa.json --checkpoint my_tsvits.pt --text "I like hamburgers"
+```
+Check `tsvitsfe.py` for the simple inference frontend class. The script above just calls it and saves to a wave file
+
+
 # VITS: Conditional Variational Autoencoder with Adversarial Learning for End-to-End Text-to-Speech
 
 ### Jaehyeon Kim, Jungil Kong, and Juhee Son
