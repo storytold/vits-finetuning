@@ -58,7 +58,7 @@ class TextAudioLoader(torch.utils.data.Dataset):
                 continue
             
             au_len = librosa.get_duration(filename=audiopath)
-            if au_len > 13.0:
+            if au_len > 10.0:
                 n_fau += 1
                 continue
                 

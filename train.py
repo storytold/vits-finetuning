@@ -394,7 +394,9 @@ def evaluate(hps, generator, eval_loader, writer_eval):
         t_bert_lens = torch.LongTensor([t_bert.size(1)]).cuda(0)
         t_bert = t_bert.cuda(0)
         
-        audio, attn, t_mask, _ = generator.module.infer(t_text_norm, t_text_lengths, t_moji, t_bert, t_bert_lens, noise_scale=.667, noise_scale_w=0.8, length_scale=1.0)
+        with torch.no_grad():
+            audio, attn, t_mask, _ = generator.module.infer(t_text_norm, t_text_lengths, t_moji, t_bert, t_bert_lens, noise_scale=.667, noise_scale_w=0.8, length_scale=1.0)
+        
         test_audio_lengths = t_mask.sum([1,2]).long() * hps.data.hop_length
         y_test_mel = mel_spectrogram_torch(
             audio.squeeze(1).float(),

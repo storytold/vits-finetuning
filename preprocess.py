@@ -24,7 +24,7 @@ if __name__ == '__main__':
   test_sentences = ["The quick brown fox jumps over the lazy dog",
                     "In a galaxy far, far away, a young hero embarks on an epic adventure",
                     "Ladies and gentlemen, welcome to the annual science fair!",
-                    "The chef skillfully prepares a delicious gourmet meal with fresh ingredients and exquisite flavors",
+                    "Peter Piper picked a peck of pickled peppers. How many pickled peppers did Peter Piper pick?",
                     "The crowd erupted in cheers as the team scored the winning goal in the final seconds of the match"]
   
   if len(args.test) > 1:
