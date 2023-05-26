@@ -355,7 +355,9 @@ def evaluate(hps, generator, eval_loader, writer_eval):
         bert = bert[:1]
         bert_lens = bert_lens[:1]
         break
-
+        
+      image_dict = {}
+      audio_dict = {}
       y_hat, attn, mask, *_ = generator.module.infer(x, x_lengths, tm_hidden, bert, bert_lens, max_len=1000)
       y_hat_lengths = mask.sum([1,2]).long() * hps.data.hop_length
 
@@ -376,12 +378,38 @@ def evaluate(hps, generator, eval_loader, writer_eval):
         hps.data.mel_fmin,
         hps.data.mel_fmax
       )
-    image_dict = {
-      "gen/mel": utils.plot_spectrogram_to_numpy(y_hat_mel[0].cpu().numpy())
-    }
-    audio_dict = {
-      "gen/audio": y_hat[0,:,:y_hat_lengths[0]]
-    }
+      image_dict["gen/mel"] = utils.plot_spectrogram_to_numpy(y_hat_mel[0].cpu().numpy())
+      audio_dict["gen/audio"] = y_hat[0,:,:y_hat_lengths[0]]
+      print("Inferring test sentences...")
+      for t_idx, test_file in enumerate(sorted(os.listdir(hps.test_dp))):
+        if not ".pt" in test_file:
+            continue
+        
+        t_text_norm, t_moji, t_bert = torch.load(os.path.join(hps.test_dp, test_file))
+        
+        t_text_norm = t_text_norm.unsqueeze(0).cuda(0)
+        t_text_lengths = torch.LongTensor([t_text_norm.size(1)]).cuda(0)
+        
+        t_moji = t_moji.squeeze().unsqueeze(0).cuda(0)
+        t_bert_lens = torch.LongTensor([t_bert.size(1)]).cuda(0)
+        t_bert = t_bert.cuda(0)
+        
+        audio, attn, t_mask, _ = generator.module.infer(t_text_norm, t_text_lengths, t_moji, t_bert, t_bert_lens, noise_scale=.667, noise_scale_w=0.8, length_scale=1.0)
+        test_audio_lengths = t_mask.sum([1,2]).long() * hps.data.hop_length
+        y_test_mel = mel_spectrogram_torch(
+            audio.squeeze(1).float(),
+            hps.data.filter_length,
+            hps.data.n_mel_channels,
+            hps.data.sampling_rate,
+            hps.data.hop_length,
+            hps.data.win_length,
+            hps.data.mel_fmin,
+            hps.data.mel_fmax
+        )
+        image_dict[f"gen/mel_test{t_idx}"] = utils.plot_spectrogram_to_numpy(y_test_mel[0].cpu().numpy())
+        audio_dict[f"gen/audio_test{t_idx}"] = audio[0,:,:test_audio_lengths[0]]
+        
+        
     if global_step == 0:
       image_dict.update({"gt/mel": utils.plot_spectrogram_to_numpy(mel[0].cpu().numpy())})
       audio_dict.update({"gt/audio": y[0,:,:y_lengths[0]]})

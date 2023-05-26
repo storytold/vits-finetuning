@@ -6,6 +6,7 @@ import os
 from moji.moji import TorchMoji
 import torch
 from bertfe import BERTFrontEnd
+import commons
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
@@ -14,11 +15,21 @@ if __name__ == '__main__':
   parser.add_argument("--filelists", nargs="+", default=["filelists/ljs_audio_text_val_filelist.txt", "filelists/ljs_audio_text_test_filelist.txt"])
   parser.add_argument("--text_cleaners", nargs="+", default=["english_cleaners2"])
   parser.add_argument("--bert", default="huawei-noah/TinyBERT_General_4L_312D")
+  parser.add_argument("--test", default="")
   
 
   args = parser.parse_args()
   moji = TorchMoji(verbose=True)
   bert_f = BERTFrontEnd(model_name=args.bert)
+  test_sentences = ["The quick brown fox jumps over the lazy dog",
+                    "In a galaxy far, far away, a young hero embarks on an epic adventure",
+                    "Ladies and gentlemen, welcome to the annual science fair!",
+                    "The chef skillfully prepares a delicious gourmet meal with fresh ingredients and exquisite flavors",
+                    "The crowd erupted in cheers as the team scored the winning goal in the final seconds of the match"]
+  
+  if len(args.test) > 1:
+    with open(args.test) as f:
+        test_sentences = f.readlines()
   
   
   if "arpa_cleaners" in args.text_cleaners:
@@ -61,4 +72,28 @@ if __name__ == '__main__':
     with open(new_filelist, "w", encoding="utf-8") as f:
       for x in new_fp_text:
         f.write("|".join(x) + "\n")
+  
+  print("Writing test data...")
+  test_path = "test_preproc"
+  for i, test_sent in tqdm(enumerate(test_sentences)):
+    moji_t = moji(test_sent)
+    bert_t, _ = bert_f.infer(test_sent)
+    
+    test_cleaned_text = text._clean_text(test_sent, args.text_cleaners)
+    cleaned_text_indices = text.cleaned_text_to_sequence(test_cleaned_text)
+    text_norm = commons.intersperse(cleaned_text_indices, 0)
+    text_norm = torch.LongTensor(text_norm)
+    
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+    
+    test_rawfn = f"test{i}.pt"
+    test_fullfn = os.path.join(test_path, test_rawfn)
+    
+    torch.save([text_norm, moji_t, bert_t], test_fullfn)
+    
+    
+        
+   
+    
       

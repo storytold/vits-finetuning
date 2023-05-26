@@ -161,6 +161,8 @@ def get_hparams(init=True):
   parser.add_argument('-l','--use-latest', action='store_true', help='Whether to use latest-style checkpointing (saves to the same file every time) instead of regular. Saves disk space')
   parser.add_argument('-w', '--workers', type=int, default=8,
                       help='Number of workers to use for dataloading. Should not be less than the amount of CPU threads')
+  parser.add_argument('-t', '--test-dp', type=str, default="test_preproc",
+                      help='Path where preprocessed test data is')
 
 
   
@@ -169,6 +171,7 @@ def get_hparams(init=True):
   pt_path = args.pretrained
   use_latest = args.use_latest
   n_workers = args.workers
+  test_data_path = args.test_dp
 
 
   if not os.path.exists(model_dir):
@@ -191,6 +194,7 @@ def get_hparams(init=True):
   hparams.pt_path = pt_path
   hparams.use_latest = use_latest
   hparams.n_workers = n_workers
+  hparams.test_dp = test_data_path
   return hparams
 
 
