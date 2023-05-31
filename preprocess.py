@@ -42,15 +42,15 @@ if __name__ == '__main__':
     
     for i in tqdm(range(len(filepaths_and_text))):
       original_text = filepaths_and_text[i][args.text_index]
-      original_fname = filepaths_and_text[i][0].split(".")[0] # wavs/cat.wav -> wavs/cat
+      original_fname = filepaths_and_text[i][0]
       
-      moji_filename = original_fname + ".torchmoji"
+      moji_filename = original_fname.replace(".wav",".torchmoji")
       if not os.path.isfile(moji_filename):
         moji_result = moji(original_text)
         torch.save(moji_result, moji_filename)
         
         
-      bert_filename = original_fname + ".bert"
+      bert_filename = original_fname.replace(".wav",".bert")
       if not os.path.isfile(bert_filename):
         bert_res, _ = bert_f.infer(original_text)
         torch.save(bert_res,bert_filename)

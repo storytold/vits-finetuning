@@ -1,7 +1,7 @@
 {
   "train": {
     "log_interval": 200,
-    "eval_interval": 1000,
+    "eval_interval": 1500,
     "save_interval": 2000,
     "seed": 1234,
     "epochs": 20000,
