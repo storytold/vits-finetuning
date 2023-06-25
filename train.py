@@ -34,7 +34,8 @@ from losses import (
   discriminator_loss,
   feature_loss,
   kl_loss,
-  ForwardSumLoss
+  ForwardSumLoss,
+  BinLoss
 )
 from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
 from text.symbols import symbols
@@ -177,6 +178,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
 
   train_loader.batch_sampler.set_epoch(epoch)
   forward_sum = ForwardSumLoss()
+  bin_loss = BinLoss()
   global global_step
 
 
@@ -205,7 +207,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
           hps.data.mel_fmax)
     
       
-      y_hat, x1, l_length, attn, attn_logprob, ids_slice, x_mask, z_mask,\
+      y_hat, x1, l_length, attn, attn_logprob, attn_soft, ids_slice, x_mask, z_mask,\
       (z, z_p, m_p, logs_p, m_q, logs_q) = net_g(x, x_lengths, spec, spec_lengths, mel, tm_hidden, bert, bert_lens)
       
       
@@ -257,6 +259,14 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
       with autocast(enabled=False):
         loss_dur = torch.sum(l_length.float())
         ctc_loss = forward_sum(attn_logprob=attn_logprob, in_lens=x_lengths, out_lens=spec_lengths)
+        loss_align = ctc_loss
+        
+        if epoch > hps.train.bin_loss_start_epoch:
+            bin_loss_scale = min((epoch - hps.train.bin_loss_start_epoch) / hps.train.bin_loss_warmup_epochs, 1.0)
+            al_match_loss = bin_loss(hard_attention=attn, soft_attention=attn_soft) * bin_loss_scale
+            loss_align += al_match_loss
+
+        
         loss_mel = F.l1_loss(y_mel, y_hat_mel) * hps.train.c_mel
         loss_kl = kl_loss(z_p, logs_q, m_p, logs_p, z_mask) * hps.train.c_kl
 
@@ -271,7 +281,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
         loss_gen = loss_gen_f + loss_gen_s
         losses_gen = losses_gen_f + losses_gen_s
         
-        loss_gen_all = loss_gen + loss_fm + loss_mel + loss_dur + loss_kl + ctc_loss
+        loss_gen_all = loss_gen + loss_fm + loss_mel + loss_dur + loss_kl + loss_align
         loss_gen_all /= n_acc_steps
         
     if ((batch_idx + 1) % n_acc_steps == 0) or (batch_idx + 1 == len(train_loader)):
@@ -296,7 +306,7 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
         logger.info([x.item() for x in losses] + [global_step, lr])
         
         scalar_dict = {"loss/g/total": loss_gen_all, "loss/d/total": loss_disc_all, "learning_rate": lr, "grad_norm_d": grad_norm_d, "grad_norm_g": grad_norm_g}
-        scalar_dict.update({"loss/g/fm": loss_fm, "loss/g/mel": loss_mel, "loss/g/dur": loss_dur, "loss/g/kl": loss_kl, "loss/g/ctc" : ctc_loss})
+        scalar_dict.update({"loss/g/fm": loss_fm, "loss/g/mel": loss_mel, "loss/g/dur": loss_dur, "loss/g/kl": loss_kl, "loss/g/align" : loss_align})
 
         scalar_dict.update({"loss/g/{}".format(i): v for i, v in enumerate(losses_gen)})
         scalar_dict.update({"loss/d_r/{}".format(i): v for i, v in enumerate(losses_disc_r)})

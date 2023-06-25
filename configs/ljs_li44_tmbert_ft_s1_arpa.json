@@ -2,7 +2,7 @@
   "train": {
     "log_interval": 200,
     "eval_interval": 1000,
-    "save_interval": 2000,
+    "save_interval": 5000,
     "seed": 1234,
     "epochs": 20000,
     "learning_rate": 2e-4,
@@ -17,7 +17,9 @@
     "warmup_epochs": 0,
     "c_mel": 45,
     "c_kl": 1.0,
-    "use_8bit": false
+    "use_8bit": false,
+    "bin_loss_warmup_epochs": 25,
+    "bin_loss_start_epoch": 10
   },
   "data": {
     "training_files":"filelists/train_filelist.txt.cleaned",

@@ -18,6 +18,8 @@
     "c_mel": 45,
     "c_kl": 1.0,
     "use_8bit": true
+    "bin_loss_warmup_epochs": 25,
+    "bin_loss_start_epoch": 10
   },
   "data": {
     "training_files":"filelists/train_filelist.txt.cleaned",

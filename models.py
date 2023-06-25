@@ -734,7 +734,7 @@ class SynthesizerTrn(nn.Module):
     spec, phase, x1 = self.dec(z_slice, g=g)
     
     o = self.stft.inverse(spec, phase)
-    return o, x1, l_length, attn, attn_logprob, ids_slice, x_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q)
+    return o, x1, l_length, attn, attn_logprob, attn_soft, ids_slice, x_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q)
 
   def infer(self, x, x_lengths, tm_hidden, bert, bert_lens, sid=None, noise_scale=1, length_scale=1, noise_scale_w=1., max_len=None):
     tm_encoded = self.tm_enc(tm_hidden) # [b, tm_last_size]

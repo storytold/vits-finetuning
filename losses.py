@@ -48,6 +48,31 @@ class ForwardSumLoss(torch.nn.modules.loss._Loss):
         total_loss /= attn_logprob.shape[0]
         return total_loss
 
+
+
+class BinLoss(torch.nn.modules.loss._Loss):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    def input_types(self):
+        return {
+            "hard_attention": NeuralType(('B', 'S', 'T_spec', 'T_text'), ProbsType()),
+            "soft_attention": NeuralType(('B', 'S', 'T_spec', 'T_text'), ProbsType()),
+        }
+
+    @property
+    def output_types(self):
+        return {
+            "bin_loss": NeuralType(elements_type=LossType()),
+        }
+
+
+    def forward(self, hard_attention, soft_attention):
+        log_sum = torch.log(torch.clamp(soft_attention[hard_attention == 1], min=1e-12)).sum()
+        return -log_sum / hard_attention.sum()
+
+
 def feature_loss(fmap_r, fmap_g):
   loss = 0
   for dr, dg in zip(fmap_r, fmap_g):
